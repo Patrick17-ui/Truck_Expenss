@@ -1,0 +1,11 @@
+
+services:
+  backend:
+    container_name: te_backend
+    build:
+      context: .
+    env_file:
+      - .env
+    ports:
+      - "9000:3000"
+    restart: unless-stopped

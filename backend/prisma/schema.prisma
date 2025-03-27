@@ -1,0 +1,185 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Vehicle {
+  id                 String      @id @default(uuid())
+  brand              String?
+  type               VehicleType @default(LOG_TRUCK)
+  model              String?
+  tractorPlateNumber String?     @unique
+  trailerPlateNumber String?     @unique
+  trips              Trip[]
+  documents          Document[]
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  deletedAt          DateTime?
+}
+
+enum VehicleType {
+  LOG_TRUCK
+  FLATBED
+}
+
+model User {
+  id        String    @id @default(uuid())
+  matricule String    @unique
+  name      String
+  email     String    @unique
+  password  String
+  role      UserRole
+  trips     Trip[]
+  salaries  Salary[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+enum UserRole {
+  ADMIN
+  USER
+  DRIVER
+}
+
+model Client {
+  id        String    @id @default(uuid())
+  name      String
+  contact   String?
+  address   String?
+  trips     Trip[]
+  invoices  Invoice[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model Trip {
+  id          String    @id @default(uuid())
+  vehicleId   String
+  driverId    String
+  clientId    String?
+  departure   String
+  arrival     String
+  lvNumber    String?   @unique
+  startTime   DateTime
+  endTime     DateTime?
+  cubicMeters Float?
+  tripType    TripType
+  expenses    Expense[]
+  salary      Salary?
+  totalAmount Decimal?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  vehicle Vehicle  @relation(fields: [vehicleId], references: [id])
+  driver  User     @relation(fields: [driverId], references: [id])
+  client  Client?  @relation(fields: [clientId], references: [id])
+  invoice Invoice?
+}
+
+enum TripType {
+  LONG_DISTANCE
+  SHUTTLE
+}
+
+model Weighbridge {
+  id      String    @id @default(uuid())
+  name    String
+  Expense Expense[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model Expense {
+  id            String           @id @default(uuid())
+  tripId        String
+  category      ExpenseCategory?
+  amount        Decimal
+  description   String?
+  weighbridgeId String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?
+
+  weighbridge Weighbridge? @relation(fields: [weighbridgeId], references: [id])
+  trip        Trip         @relation(fields: [tripId], references: [id], onDelete: Cascade)
+}
+
+enum ExpenseCategory {
+  FUEL
+  TOLL
+  MAINTENANCE
+  WEIGHBRIDGE
+  MISC
+}
+
+model Document {
+  id           String          @id @default(uuid())
+  vehicleId    String
+  documentType DocumentType
+  expiryDate   DateTime
+  status       DocumentStatus?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  deletedAt    DateTime?
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+}
+
+enum DocumentType {
+  INSURANCE
+  LICENSE
+  TECHNICAL_VISIT
+  ACF
+  BLUE_CARD
+  GRAY_CARD
+}
+
+enum DocumentStatus {
+  VALID
+  INVALID
+}
+
+model Salary {
+  id          String   @id @default(uuid())
+  driverId    String
+  tripId      String
+  bonusAmount Decimal
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  driver User @relation(fields: [driverId], references: [id])
+  trip   Trip @relation(fields: [tripId], references: [id])
+
+  @@unique([tripId])
+}
+
+model Invoice {
+  id          String   @id @default(uuid())
+  clientId    String
+  tripId      String
+  invoiceDate DateTime @default(now())
+  tva         Decimal  @default(0.19)
+  totalAmount Decimal
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt    DateTime?
+
+  client Client @relation(fields: [clientId], references: [id])
+  trip   Trip   @relation(fields: [tripId], references: [id])
+
+  @@unique([tripId])
+}
